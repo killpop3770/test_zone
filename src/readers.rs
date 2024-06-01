@@ -2,18 +2,8 @@ use std::error::Error;
 
 use csv;
 use serde::{Deserialize, Serialize};
+use crate::structs::{Article, Paragraph};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Article {
-    pub article: String,
-    pub author: String,
-    pub paragraph: Vec<Paragraph>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Paragraph {
-    pub name: String,
-}
 
 pub fn write_to_json(obj: &Article) -> String {
     let json = serde_json::to_string(obj).unwrap();

@@ -1,15 +1,15 @@
-mod readers;
-mod structs;
-
-use reqwest::Error;
 #[allow(unused_imports)]
 use error_chain::error_chain;
-use reqwest::header::USER_AGENT;
+
+use crate::converters::converter_celcius_and_fahrenheit;
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
-use crate::structs::{Article, Paragraph, User};
+
+mod readers;
+mod structs;
+mod converters;
 
 // fn main() {
 //     println!("Hello, world!");
@@ -86,17 +86,27 @@ use crate::structs::{Article, Paragraph, User};
 //     Ok(())
 // }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    let url = "https://httpbin.org/get".to_string();
-    let user = "testuser".to_string();
-    let passwd: Option<String> = None;
+// #[tokio::main]
+// async fn main() -> Result<(), Error> {
+//     let url = "https://httpbin.org/get".to_string();
+//     let user = "testuser".to_string();
+//     let passwd: Option<String> = None;
+//
+//     let client = reqwest::Client::new();
+//     let response = client.get(url).basic_auth(user, passwd).send().await?;
+//
+//
+//     println!("{:?}", response);
+//
+//     Ok(())
+// }
 
-    let client = reqwest::Client::new();
-    let response = client.get(url).basic_auth(user, passwd).send().await?;
+fn main() {
 
-
-    println!("{:?}", response);
-
-    Ok(())
+    match converter_celcius_and_fahrenheit() {
+        Ok(result) => {
+            println!("Result: {}", ((result * 100.) as i32) as f32 / 100.)
+        }
+        Err(error) => { eprintln!("Error occured by: {}", error) }
+    }
 }

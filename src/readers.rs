@@ -1,9 +1,25 @@
+use std::{env, io};
 use std::error::Error;
 
 use csv;
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
 use crate::structs::{Article, Paragraph};
 
+pub fn read_md_files() -> Result<Vec<PathBuf>, io::Error> {
+    let mut md_files_dir = env::current_dir()?;
+    md_files_dir.push("md");
+    let entires = fs::read_dir(md_files_dir)?;
+
+    let mut path_vec = vec![];
+
+    for entire in entires {
+        path_vec.push(entire?.path());
+    }
+
+    Ok(path_vec)
+}
 
 pub fn write_to_json(obj: &Article) -> String {
     let json = serde_json::to_string(obj).unwrap();

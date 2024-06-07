@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+
+pub enum ProcessorMessage {
+    Success(String),
+    Error(String),
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Article {
     pub article: String,

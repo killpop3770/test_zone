@@ -1,11 +1,15 @@
+use std::sync::mpsc;
+
 #[allow(unused_imports)]
 use error_chain::error_chain;
 
-use crate::converters::converter_celcius_and_fahrenheit;
+use crate::converters::convert_md_to_html_parallel;
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
+use crate::readers::read_md_files;
+use crate::structs::ProcessorMessage;
 
 mod readers;
 mod structs;
@@ -101,12 +105,109 @@ mod converters;
 //     Ok(())
 // }
 
-fn main() {
+// fn main() {
+//
+//     match converter_celcius_and_fahrenheit() {
+//         Ok(result) => {
+//             println!("Result: {}", ((result * 100.) as i32) as f32 / 100.)
+//         }
+//         Err(error) => { eprintln!("Error occured by: {}", error) }
+//     }
+// }
 
-    match converter_celcius_and_fahrenheit() {
-        Ok(result) => {
-            println!("Result: {}", ((result * 100.) as i32) as f32 / 100.)
+// fn main() {
+//     let handler = thread::spawn(|| {
+//         println!("hi!");
+//         println!("{:?}", thread::current().id());
+//         thread::sleep(time::Duration::from_millis(1));
+//     });
+//     thread::spawn(|| {
+//         for i in 0..10 {
+//             println!("hi #{} from spawn thread: {:?}", i, thread::current().id());
+//             thread::sleep(time::Duration::from_millis(5));
+//         }
+//     });
+//
+//     for i in 0..10 {
+//         println!("hi #{} from main thread: {:?}", i, thread::current().id());
+//         thread::sleep(time::Duration::from_millis(5));
+//     }
+//     handler.join().expect("Error with thread!");
+//
+//     let (sender, receiver) = mpsc::channel();
+//
+//     let another_sender = sender.clone();
+//
+//     thread::spawn(move || {
+//         let msg = "Hi";
+//         for i in 1..=5 {
+//             let res = format!("{}#{} from {:?} !", msg, i, thread::current().id());
+//             sender.send(res).unwrap();
+//             thread::sleep(Duration::from_secs(2));
+//         }
+//     });
+//
+//     thread::spawn(move || {
+//         let msg = "Bye";
+//         for i in 1..=5 {
+//             let res = format!("{}#{} from {:?} !", msg, i, thread::current().id());
+//             another_sender.send(res).unwrap();
+//             thread::sleep(Duration::from_secs(1));
+//         }
+//     });
+//
+//     for received_data in receiver {
+//         println!("{}", received_data);
+//     }
+//
+//     println!("===================");
+//
+//     let data = Arc::new(Mutex::new(10));
+//     let mut handlers = vec![];
+//
+//     for _ in 0..10 {
+//         let data_ref = Arc::clone(&data);
+//
+//         let handler = thread::spawn(move || {
+//             let mut deref_data = data_ref.lock().unwrap();
+//             *deref_data += 1;
+//             println!("{} from {:?}", *deref_data, thread::current().id());
+//         });
+//
+//         handlers.push(handler)
+//     }
+//
+//     for handler in handlers {
+//         drop(handler);
+//     }
+// }
+
+fn main() {//🙂
+    match read_md_files() {
+        Ok(files) => {
+            let (sender, receiver) = mpsc::channel();
+            let handlers = convert_md_to_html_parallel(files, sender);
+
+            for (index, handler) in handlers.into_iter().enumerate() {
+                match handler.join() {
+                    Ok(_) => println!("Process {index} is finished!"),
+                    Err(error) => {
+                        if let Some(s) = error.downcast_ref::<String>() {
+                            println!("Thread {index} error occured by {s} !");
+                        } else {
+                            println!("Unknown error at thread {index}!");
+                        }
+                    }
+                }
+            }
+
+            for received_msg in receiver {
+                match received_msg {
+                    ProcessorMessage::Success(s) => println!("Success {s}"),
+                    ProcessorMessage::Error(e) => println!("Error {e}")
+                }
+            }
         }
-        Err(error) => { eprintln!("Error occured by: {}", error) }
+        Err(error) => eprintln!("Something wrong with collecting MD files: {}", error)
     }
 }

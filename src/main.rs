@@ -1,6 +1,8 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
@@ -213,45 +215,78 @@ mod converters;
 //     }
 // }
 
+// fn main() {
+//     let mut elder_cat = Rc::new(RefCell::new(Cat { name: "Mars".to_string(), age: 15, parent: None }));
+//     println!("elder_cat: {:?}", elder_cat);
+//     let parent_cat = Rc::new(RefCell::new(Cat { name: "Mr.Johnson".to_string(), age: 9, parent: Some(Rc::clone(&elder_cat)) }));
+//     println!("young_cat: {:?}", parent_cat);
+//     let young_cat = Rc::new(RefCell::new(Cat { name: "Bobby".to_string(), age: 3, parent: Some(Rc::clone(&parent_cat)) }));
+//     println!("young_cat: {:?}", young_cat);
+//
+//     elder_cat.borrow_mut().age = 1000;
+//
+//     // println!("elder_cat: {:?}", elder_cat);
+//     // println!("young_cat: {:?}", parent_cat);
+//     // println!("young_cat: {:?}", young_cat);
+//
+//     get_parent_recursively(&young_cat);
+//
+//     println!("======================");
+//
+//     let arg = 42;
+//     let res = MyBox::new(&arg);
+//     res.print_field();
+//     println!("deref arg: {}", res.deref());
+//     drop(res);
+//
+//     let x = 5;
+//     let y = &x;
+//     let z = Box::new(x);
+//     let o = MyBox::new(x);
+//     let u = &o;
+//     let r = o.deref();
+//     let t = *o;
+//
+//     println!("5 == x is {}", 5 == x);
+//     println!("5 == *y is {}", 5 == *y);
+//     println!("5 == *z is {}", 5 == *z);
+//     println!("5 == *o is {}", 5 == *o);
+//     println!("5 == *u is {}", 5 == *(*u).deref());
+//     println!("5 == *r is {}", 5 == *r);
+//
+//     let mb2 = MyBox::new(String::from("World"));
+//     MyBox::<String>::hello(&mb2);
+// }
+
 fn main() {
-    let mut elder_cat = Rc::new(RefCell::new(Cat { name: "Mars".to_string(), age: 15, parent: None }));
-    println!("elder_cat: {:?}", elder_cat);
-    let parent_cat = Rc::new(RefCell::new(Cat { name: "Mr.Johnson".to_string(), age: 9, parent: Some(Rc::clone(&elder_cat)) }));
-    println!("young_cat: {:?}", parent_cat);
-    let young_cat = Rc::new(RefCell::new(Cat { name: "Bobby".to_string(), age: 3, parent: Some(Rc::clone(&parent_cat)) }));
-    println!("young_cat: {:?}", young_cat);
+    let mut data1 = Arc::new(Mutex::new(1));
+    let mut data2 = Arc::new(Mutex::new(2));
 
-    elder_cat.borrow_mut().age = 1000;
+    let data1_clone = Arc::clone(&data1);
+    let data2_clone = Arc::clone(&data2);
 
-    // println!("elder_cat: {:?}", elder_cat);
-    // println!("young_cat: {:?}", parent_cat);
-    // println!("young_cat: {:?}", young_cat);
+    let h1 = thread::spawn(move || {
+        println!("lock data2 in h1");
+        let guard2 = data2_clone.lock().unwrap();
+        println!("wait second in h1");
+        thread::sleep(std::time::Duration::from_secs(1));
+        println!("lock data1 in h1");
+        let guard1 = data1_clone.lock().unwrap();
+        println!("h1 finished!");
+    });
 
-    get_parent_recursively(&young_cat);
+    let h2 = thread::spawn(move || {
+        println!("lock data1 in h2");
+        let guard1 = data1.lock().unwrap();
+        println!("wait second in h2");
+        thread::sleep(std::time::Duration::from_secs(1));
+        println!("lock data2 in h2");
+        let guard2 = data2.lock().unwrap();
+        println!("h2 finished!");
+    });
 
-    println!("======================");
+    h1.join().expect("Error to run h1");
+    h2.join().expect("Error to run h2");
 
-    let arg = 42;
-    let res = MyBox::new(&arg);
-    res.print_field();
-    println!("deref arg: {}", res.deref());
-    drop(res);
 
-    let x = 5;
-    let y = &x;
-    let z = Box::new(x);
-    let o = MyBox::new(x);
-    let u = &o;
-    let r = o.deref();
-    let t = *o;
-
-    println!("5 == x is {}", 5 == x);
-    println!("5 == *y is {}", 5 == *y);
-    println!("5 == *z is {}", 5 == *z);
-    println!("5 == *o is {}", 5 == *o);
-    println!("5 == *u is {}", 5 == *(*u).deref());
-    println!("5 == *r is {}", 5 == *r);
-
-    let mb2 = MyBox::new(String::from("World"));
-    MyBox::<String>::hello(&mb2);
 }

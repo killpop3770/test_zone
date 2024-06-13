@@ -1,15 +1,16 @@
-use std::sync::mpsc;
+use std::cell::RefCell;
+use std::ops::Deref;
+use std::rc::Rc;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
 
-use crate::converters::convert_md_to_html_parallel;
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
+use crate::readers::get_parent_recursively;
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
-use crate::readers::read_md_files;
-use crate::structs::ProcessorMessage;
+use crate::structs::{Cat, MyBox};
 
 mod readers;
 mod structs;
@@ -182,32 +183,75 @@ mod converters;
 //     }
 // }
 
-fn main() {//🙂
-    match read_md_files() {
-        Ok(files) => {
-            let (sender, receiver) = mpsc::channel();
-            let handlers = convert_md_to_html_parallel(files, sender);
+// fn main() {//🙂
+//     match read_md_files() {
+//         Ok(files) => {
+//             let (sender, receiver) = mpsc::channel();
+//             let handlers = convert_md_to_html_parallel(files, sender);
+//
+//             for (index, handler) in handlers.into_iter().enumerate() {
+//                 match handler.join() {
+//                     Ok(_) => println!("Process {index} is finished!"),
+//                     Err(error) => {
+//                         if let Some(s) = error.downcast_ref::<String>() {
+//                             println!("Thread {index} error occured by {s} !");
+//                         } else {
+//                             println!("Unknown error at thread {index}!");
+//                         }
+//                     }
+//                 }
+//             }
+//
+//             for received_msg in receiver {
+//                 match received_msg {
+//                     ProcessorMessage::Success(s) => println!("Success {s}"),
+//                     ProcessorMessage::Error(e) => println!("Error {e}")
+//                 }
+//             }
+//         }
+//         Err(error) => eprintln!("Something wrong with collecting MD files: {}", error)
+//     }
+// }
 
-            for (index, handler) in handlers.into_iter().enumerate() {
-                match handler.join() {
-                    Ok(_) => println!("Process {index} is finished!"),
-                    Err(error) => {
-                        if let Some(s) = error.downcast_ref::<String>() {
-                            println!("Thread {index} error occured by {s} !");
-                        } else {
-                            println!("Unknown error at thread {index}!");
-                        }
-                    }
-                }
-            }
+fn main() {
+    let mut elder_cat = Rc::new(RefCell::new(Cat { name: "Mars".to_string(), age: 15, parent: None }));
+    println!("elder_cat: {:?}", elder_cat);
+    let parent_cat = Rc::new(RefCell::new(Cat { name: "Mr.Johnson".to_string(), age: 9, parent: Some(Rc::clone(&elder_cat)) }));
+    println!("young_cat: {:?}", parent_cat);
+    let young_cat = Rc::new(RefCell::new(Cat { name: "Bobby".to_string(), age: 3, parent: Some(Rc::clone(&parent_cat)) }));
+    println!("young_cat: {:?}", young_cat);
 
-            for received_msg in receiver {
-                match received_msg {
-                    ProcessorMessage::Success(s) => println!("Success {s}"),
-                    ProcessorMessage::Error(e) => println!("Error {e}")
-                }
-            }
-        }
-        Err(error) => eprintln!("Something wrong with collecting MD files: {}", error)
-    }
+    elder_cat.borrow_mut().age = 1000;
+
+    // println!("elder_cat: {:?}", elder_cat);
+    // println!("young_cat: {:?}", parent_cat);
+    // println!("young_cat: {:?}", young_cat);
+
+    get_parent_recursively(&young_cat);
+
+    println!("======================");
+
+    let arg = 42;
+    let res = MyBox::new(&arg);
+    res.print_field();
+    println!("deref arg: {}", res.deref());
+    drop(res);
+
+    let x = 5;
+    let y = &x;
+    let z = Box::new(x);
+    let o = MyBox::new(x);
+    let u = &o;
+    let r = o.deref();
+    let t = *o;
+
+    println!("5 == x is {}", 5 == x);
+    println!("5 == *y is {}", 5 == *y);
+    println!("5 == *z is {}", 5 == *z);
+    println!("5 == *o is {}", 5 == *o);
+    println!("5 == *u is {}", 5 == *(*u).deref());
+    println!("5 == *r is {}", 5 == *r);
+
+    let mb2 = MyBox::new(String::from("World"));
+    MyBox::<String>::hello(&mb2);
 }

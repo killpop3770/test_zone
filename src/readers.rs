@@ -1,11 +1,30 @@
 use std::{env, io};
+use std::cell::RefCell;
 use std::error::Error;
 
 use csv;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use crate::structs::{Article, Paragraph};
+use std::rc::Rc;
+use crate::structs::{Article, Cat, Paragraph};
+
+pub fn get_parent_recursively(cat: &Rc<RefCell<Cat>>) {
+    let mut current = Some(Rc::clone(cat));
+
+    while let Some(current_cat) = current.take() {
+        let current_cat_ref = current_cat.borrow();
+        println!("Cat with name {} and age {} ", current_cat_ref.name, current_cat_ref.age);
+
+        if let Some(current_cat_parent_ref) = current_cat_ref.parent.as_ref() {
+            let current_cat_parent = current_cat_parent_ref.borrow();
+            println!("has parent with name {} !", current_cat_parent.name);
+            current = Some(Rc::clone(&current_cat_parent_ref));
+        } else {
+            println!("has no parents !");
+        }
+    }
+}
 
 pub fn read_md_files() -> Result<Vec<PathBuf>, io::Error> {
     let mut md_files_dir = env::current_dir()?;

@@ -1,18 +1,19 @@
 use std::cell::{Cell, RefCell};
 use std::ops::Deref;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
+// use crate::List::{Cons, Nil};
 
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
 use crate::readers::get_parent_recursively;
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
-use crate::structs::{Cat, MyBox};
+use crate::structs::{Cat, EPost, MyBox, Node, NPost, Post};
 
 mod readers;
 mod structs;
@@ -258,35 +259,136 @@ mod converters;
 //     MyBox::<String>::hello(&mb2);
 // }
 
+// fn main() {
+//     let mut data1 = Arc::new(Mutex::new(1));
+//     let mut data2 = Arc::new(Mutex::new(2));
+//
+//     let data1_clone = Arc::clone(&data1);
+//     let data2_clone = Arc::clone(&data2);
+//
+//     let h1 = thread::spawn(move || {
+//         println!("lock data2 in h1");
+//         let guard2 = data2_clone.lock().unwrap();
+//         println!("wait second in h1");
+//         thread::sleep(std::time::Duration::from_secs(1));
+//         println!("lock data1 in h1");
+//         let guard1 = data1_clone.lock().unwrap();
+//         println!("h1 finished!");
+//     });
+//
+//     let h2 = thread::spawn(move || {
+//         println!("lock data1 in h2");
+//         let guard1 = data1.lock().unwrap();
+//         println!("wait second in h2");
+//         thread::sleep(std::time::Duration::from_secs(1));
+//         println!("lock data2 in h2");
+//         let guard2 = data2.lock().unwrap();
+//         println!("h2 finished!");
+//     });
+//
+//     h1.join().expect("Error to run h1");
+//     h2.join().expect("Error to run h2");
+// }
+
+// #[derive(Debug)]
+// enum List {
+//     Cons(i32, RefCell<Rc<List>>),
+//     Nil,
+// }
+//
+// impl List {
+//     fn tail(&self) -> Option<&RefCell<Rc<List>>> {
+//         match self {
+//             Cons(_, item) => Some(item),
+//             Nil => None,
+//         }
+//     }
+// }
+//
+// fn main() {
+//     let mut elder_cat = Rc::new(RefCell::new(Cat { name: "Mars".to_string(), age: 15, parent: None }));
+//     let parent_cat = Rc::new(RefCell::new(Cat { name: "Mr.Johnson".to_string(), age: 9, parent: Some(Rc::clone(&elder_cat)) }));
+//     elder_cat.borrow_mut().parent = Some(Rc::clone(&parent_cat));
+//
+//     // println!("elder_cat: {:?}", elder_cat);
+//     // println!("young_cat: {:?}", parent_cat);
+//
+//     let leaf = Rc::new(Node {
+//         value: 3,
+//         parent: RefCell::new(Weak::new()),
+//         children: RefCell::new(vec![]),
+//     });
+//     println!(
+//         "leaf strong = {}, weak = {}",
+//         Rc::strong_count(&leaf),
+//         Rc::weak_count(&leaf),
+//     );
+//
+//     println!("leaf parent = {:?}", leaf.parent.borrow().upgrade());
+//     {
+//         let branch = Rc::new(Node {
+//             value: 5,
+//             parent: RefCell::new(Weak::new()),
+//             children: RefCell::new(vec![Rc::clone(&leaf)]),
+//         });
+//
+//         *leaf.parent.borrow_mut() = Rc::downgrade(&branch);
+//
+//         println!(
+//             "branch strong = {}, weak = {}",
+//             Rc::strong_count(&branch),
+//             Rc::weak_count(&branch),
+//         );
+//
+//         println!(
+//             "leaf strong = {}, weak = {}",
+//             Rc::strong_count(&leaf),
+//             Rc::weak_count(&leaf),
+//         );
+//     }
+//
+//     println!("leaf parent = {:?}", leaf.parent.borrow().upgrade());
+//     println!(
+//         "leaf strong = {}, weak = {}",
+//         Rc::strong_count(&leaf),
+//         Rc::weak_count(&leaf),
+//     );
+//     println!("============");
+//
+//     let mut post = Post::new();
+//     post.add_text("hello!");
+//     println!("post: {}", post.content());
+//     post.request_review();
+//     println!("post: {}", post.content());
+//     post.reject();
+//     println!("post: {}", post.content());
+//     post.request_review();
+//     println!("post: {}", post.content());
+//     post.approve();
+//     println!("post: {}", post.content());
+//     post.request_review();
+//     println!("post: {}", post.content());
+//     println!("============");
+//
+//     let mut npost = NPost::new();
+//     npost.add_text("Hello, World!");
+//     // println!("npost: {}", npost.content());
+//     let npost = npost.request_review();
+//     // println!("npost: {}", npost.content());
+//     let npost = npost.approve();
+//     println!("npost: {}", npost.content());
+//     println!("============");
+//
+// }
+
 fn main() {
-    let mut data1 = Arc::new(Mutex::new(1));
-    let mut data2 = Arc::new(Mutex::new(2));
-
-    let data1_clone = Arc::clone(&data1);
-    let data2_clone = Arc::clone(&data2);
-
-    let h1 = thread::spawn(move || {
-        println!("lock data2 in h1");
-        let guard2 = data2_clone.lock().unwrap();
-        println!("wait second in h1");
-        thread::sleep(std::time::Duration::from_secs(1));
-        println!("lock data1 in h1");
-        let guard1 = data1_clone.lock().unwrap();
-        println!("h1 finished!");
-    });
-
-    let h2 = thread::spawn(move || {
-        println!("lock data1 in h2");
-        let guard1 = data1.lock().unwrap();
-        println!("wait second in h2");
-        thread::sleep(std::time::Duration::from_secs(1));
-        println!("lock data2 in h2");
-        let guard2 = data2.lock().unwrap();
-        println!("h2 finished!");
-    });
-
-    h1.join().expect("Error to run h1");
-    h2.join().expect("Error to run h2");
-
-
+    let mut post = EPost::new();
+    post.add_text("Hello, world!!");
+    post.request_review();
+    post.reject();
+    post.request_review();
+    post.add_text("#42#");
+    post.approve();
+    post.approve();
+    println!("Post content: {}", post.content());
 }

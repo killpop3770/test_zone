@@ -16,6 +16,7 @@ use crate::structs::{Human, Pilot, Wizard, Animal, Dog, Point, OutlinePrint, Wra
 mod converters;
 mod readers;
 mod structs;
+mod decl_macros;
 
 // fn main() {
 //     println!("Hello, world!");
@@ -487,106 +488,113 @@ mod structs;
 //     }
 // }
 
-static HELLO_WORLD: &str = "Hello, world!";
+// static HELLO_WORLD: &str = "Hello, world!";
+//
+// fn main() {
+//     let mut num = 5;
+//     let address = 0x012345usize;
+//     let r = address as *mut i32;
+//
+//     let r1 = &num as *const i32;
+//     let r2 = &mut num as *mut i32;
+//
+//     unsafe {
+//         println!("num address: {:p}", &num);
+//         println!("r1 is: {}", *r1);
+//         // println!("r2 is: {}", *r2);
+//     }
+//
+//     unsafe fn dangerous(r: *mut i32) {
+//         println!("r2 is: {}", *r);
+//     }
+//
+//     unsafe {
+//         dangerous(r2);
+//     }
+//
+//     let mut vector = vec![1, 2, 3, 4, 5, 6];
+//     let (left, right) = split_at_mut(&mut vector, 3);
+//     println!("{:?}", left);
+//     println!("{:?}", right);
+//
+//     extern "C" {
+//         fn abs(input: i32) -> i32;
+//     }
+//
+//     unsafe {
+//         println!("Absolute value of -3 according to C: {}", abs(-3));
+//     }
+//
+//     println!("{}", HELLO_WORLD);
+//
+//     add_to_count(42);
+//     unsafe { println!("{}", COUNTER); }
+//
+//     println!("===============================");
+//
+//     let person = Human;
+//     Pilot::fly(&person);
+//     Wizard::fly(&person);
+//     person.fly();
+//
+//     println!("===============================");
+//
+//     println!("A baby dog is called a {}", <Dog as Animal>::baby_name());
+//
+//     println!("===============================");
+//
+//     let p = Point { x: 1, y: 3 };
+//     p.outline_print();
+//
+//     println!("===============================");
+//
+//     let w = Wrapper(vec![String::from("hello"), String::from("world")]);
+//     println!("w = {w}");
+//
+//     println!("===============================");
+//
+//     println!("do_twice: {}", do_twice(add_one, 42));
+// }
+//
+// fn add_one(x: i32) -> i32 {
+//     x + 1
+// }
+//
+// fn do_twice(f: fn(i32) -> i32, arg: i32) -> i32 {
+//     f(arg) + f(arg)
+// }
+//
+// static mut COUNTER: u32 = 0;
+//
+// fn add_to_count(inc: u32) {
+//     unsafe {
+//         COUNTER += inc;
+//     }
+// }
+//
+// #[no_mangle]
+// pub extern "C" fn call_from_c() {
+//     println!("Just called a Rust function from C!");
+// }
+//
+// fn split_at_mut(values: &mut [i32], mid: usize) -> (&mut [i32], &mut [i32]) {
+//     let len = values.len();
+//
+//     assert!(mid <= len);
+//
+//     // (&mut values[..mid], &mut values[mid..])
+//     let mut ptr = values.as_mut_ptr();
+//     unsafe {
+//         (
+//             slice::from_raw_parts_mut(ptr, mid),
+//             slice::from_raw_parts_mut(ptr.add(mid), len - mid),
+//         )
+//     }
+// }
+
 
 fn main() {
-    let mut num = 5;
-    let address = 0x012345usize;
-    let r = address as *mut i32;
-
-    let r1 = &num as *const i32;
-    let r2 = &mut num as *mut i32;
-
-    unsafe {
-        println!("num address: {:p}", &num);
-        println!("r1 is: {}", *r1);
-        // println!("r2 is: {}", *r2);
-    }
-
-    unsafe fn dangerous(r: *mut i32) {
-        println!("r2 is: {}", *r);
-    }
-
-    unsafe {
-        dangerous(r2);
-    }
-
-    let mut vector = vec![1, 2, 3, 4, 5, 6];
-    let (left, right) = split_at_mut(&mut vector, 3);
-    println!("{:?}", left);
-    println!("{:?}", right);
-
-    extern "C" {
-        fn abs(input: i32) -> i32;
-    }
-
-    unsafe {
-        println!("Absolute value of -3 according to C: {}", abs(-3));
-    }
-
-    println!("{}", HELLO_WORLD);
-
-    add_to_count(42);
-    unsafe { println!("{}", COUNTER); }
-
-    println!("===============================");
-
-    let person = Human;
-    Pilot::fly(&person);
-    Wizard::fly(&person);
-    person.fly();
-
-    println!("===============================");
-
-    println!("A baby dog is called a {}", <Dog as Animal>::baby_name());
-
-    println!("===============================");
-
-    let p = Point { x: 1, y: 3 };
-    p.outline_print();
-
-    println!("===============================");
-
-    let w = Wrapper(vec![String::from("hello"), String::from("world")]);
-    println!("w = {w}");
-
-    println!("===============================");
-
-    println!("do_twice: {}", do_twice(add_one, 42));
-}
-
-fn add_one(x: i32) -> i32 {
-    x + 1
-}
-
-fn do_twice(f: fn(i32) -> i32, arg: i32) -> i32 {
-    f(arg) + f(arg)
-}
-
-static mut COUNTER: u32 = 0;
-
-fn add_to_count(inc: u32) {
-    unsafe {
-        COUNTER += inc;
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn call_from_c() {
-    println!("Just called a Rust function from C!");
-}
-
-fn split_at_mut(values: &mut [i32], mid: usize) -> (&mut [i32], &mut [i32]) {
-    let len = values.len();
-
-    assert!(mid <= len);
-
-    // (&mut values[..mid], &mut values[mid..])
-    let mut ptr = values.as_mut_ptr();
-    unsafe {
-        (
-            slice::from_raw_parts_mut(ptr, mid),
-            slice::from_raw_parts_mut(ptr.add(mid), len - mid),
-        )
-    }
+    let my_vec = my_vec!(1,2,3);
+    println!("{:?}", my_vec);
+    println!("========================");
 }

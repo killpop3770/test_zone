@@ -1,20 +1,23 @@
-use std::{env, io};
 use std::cell::RefCell;
 use std::error::Error;
+use std::{env, io};
 
+use crate::structs::{Article, Cat, Paragraph};
 use csv;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
-use crate::structs::{Article, Cat, Paragraph};
 
 pub fn get_parent_recursively(cat: &Rc<RefCell<Cat>>) {
     let mut current = Some(Rc::clone(cat));
 
     while let Some(current_cat) = current.take() {
         let current_cat_ref = current_cat.borrow();
-        println!("Cat with name {} and age {} ", current_cat_ref.name, current_cat_ref.age);
+        println!(
+            "Cat with name {} and age {} ",
+            current_cat_ref.name, current_cat_ref.age
+        );
 
         if let Some(current_cat_parent_ref) = current_cat_ref.parent.as_ref() {
             let current_cat_parent = current_cat_parent_ref.borrow();
@@ -51,7 +54,7 @@ pub fn read_from_file_by_csv(file_path: &str) -> Result<(), Box<dyn Error>> {
     for line in data.records() {
         match line {
             Ok(res) => println!("{:?}", res),
-            Err(err) => eprintln!("Error by parsing csv: {:?}", err)
+            Err(err) => eprintln!("Error by parsing csv: {:?}", err),
         }
     }
 
@@ -110,11 +113,9 @@ mod tests {
         let article = Article {
             article: String::from("Main"),
             author: String::from("Me"),
-            paragraph: vec![
-                Paragraph {
-                    name: String::from("first")
-                }
-            ],
+            paragraph: vec![Paragraph {
+                name: String::from("first"),
+            }],
         };
         let target = r#"{"article":"Main","author":"Me","paragraph":[{"name":"first"}]}"#;
         assert_eq!(target, write_to_json(&article));

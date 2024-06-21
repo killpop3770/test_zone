@@ -1,8 +1,90 @@
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::fmt;
 use std::fmt::{Debug, Display, Formatter, Pointer, Write};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
-use serde::{Deserialize, Serialize};
+
+pub struct Wrapper(pub Vec<String>);
+
+impl Display for Wrapper {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "[{}]", self.0.join(", "))
+    }
+}
+
+
+pub trait OutlinePrint: Display {
+    fn outline_print(&self) {
+        let output = self.to_string();
+        let len = output.len();
+        println!("{}", len);
+        println!("{}", "*".repeat(len + 4));
+        println!("*{}*", " ".repeat(len + 2));
+        println!("* {output} *");
+        println!("*{}*", " ".repeat(len + 2));
+        println!("{}", "*".repeat(len + 4));
+    }
+}
+
+pub struct Point {
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+}
+
+impl Display for Point {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+impl OutlinePrint for Point {}
+
+pub trait Animal {
+    fn baby_name() -> String;
+}
+
+pub struct Dog;
+
+impl Dog {
+    pub fn baby_name() -> String {
+        String::from("Spot")
+    }
+}
+
+impl Animal for Dog {
+    fn baby_name() -> String {
+        String::from("puppy")
+    }
+}
+
+pub trait Pilot {
+    fn fly(&self);
+}
+
+pub trait Wizard {
+    fn fly(&self);
+}
+
+pub struct Human;
+
+impl Pilot for Human {
+    fn fly(&self) {
+        println!("This is your captain speaking.");
+    }
+}
+
+impl Wizard for Human {
+    fn fly(&self) {
+        println!("Up!");
+    }
+}
+
+impl Human {
+    pub fn fly(&self) {
+        println!("*waving arms furiously*");
+    }
+}
 
 pub struct EPost {
     content: String,
@@ -227,7 +309,6 @@ impl State for Published {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Node {
     pub(crate) value: i32,
@@ -241,9 +322,7 @@ pub struct MyBox<T: Debug + Display> {
 
 impl<T: Debug + Display> MyBox<T> {
     pub fn new(refer: T) -> MyBox<T> {
-        MyBox {
-            refer
-        }
+        MyBox { refer }
     }
 
     pub fn print_field(&self) {

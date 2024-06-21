@@ -1,23 +1,21 @@
-use std::cell::{Cell, RefCell};
 use std::ops::Deref;
-use std::rc::{Rc, Weak};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::os::fd::AsRawFd;
+use std::slice;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
-// use crate::List::{Cons, Nil};
 
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
-use crate::readers::get_parent_recursively;
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
-use crate::structs::{Cat, EPost, MyBox, Node, NPost, Post};
+use crate::structs::{Human, Pilot, Wizard, Animal, Dog, Point, OutlinePrint, Wrapper};
 
+// use crate::List::{Cons, Nil};
+
+mod converters;
 mod readers;
 mod structs;
-mod converters;
 
 // fn main() {
 //     println!("Hello, world!");
@@ -70,7 +68,6 @@ mod converters;
 //
 //     Ok(())
 // }
-
 
 // #[tokio::main]
 // async fn main() -> Result<(), Error> {
@@ -381,14 +378,215 @@ mod converters;
 //
 // }
 
+// struct Object {
+//     state: Option<Box<dyn State>>,
+// }
+//
+// impl Object {
+//     pub fn new() -> Object {
+//         Object {
+//             state: Some(Box::new(Default)),
+//         }
+//     }
+//     pub fn forward(&mut self) {
+//         if let Some(x) = self.state.take() {
+//             self.state = Some(x.forward());
+//         }
+//     }
+//
+//     pub fn backward(&mut self) {
+//         if let Some(x) = self.state.take() {
+//             self.state = Some(x.backward());
+//         }
+//     }
+// }
+//
+// trait State {
+//     fn forward(self: Box<Self>) -> Box<dyn State>;
+//     fn backward(self: Box<Self>) -> Box<dyn State>;
+// }
+//
+// struct Default;
+//
+// impl State for Default {
+//     fn forward(self: Box<Self>) -> Box<dyn State> {
+//         println!("forwarded!");
+//         Box::new(Forwarded {})
+//     }
+//     fn backward(self: Box<Self>) -> Box<dyn State> {
+//         self
+//     }
+// }
+//
+// struct Forwarded;
+//
+// impl State for Forwarded {
+//     fn forward(self: Box<Self>) -> Box<dyn State> {
+//         self
+//     }
+//     fn backward(self: Box<Self>) -> Box<dyn State> {
+//         println!("backwarded!");
+//         Box::new(Default {})
+//     }
+// }
+//
+// fn main() {
+//     let mut post = EPost::new();
+//     post.add_text("Hello, world!!");
+//     post.request_review();
+//     post.reject();
+//     post.request_review();
+//     post.add_text("#42#");
+//     post.approve();
+//     post.approve();
+//     println!("Post content: {}", post.content());
+//
+//     let mut r = Object::new();
+//     r.forward();
+//     r.backward();
+// }
+
+// fn main() {
+//     enum Color {
+//         Rgb(i32, i32, i32),
+//         Hsv(i32, i32, i32),
+//     }
+//
+//     let a = Color::Rgb(1, 2, 3);
+//     let res = match a {
+//         Color::Rgb(r, ..) => r,
+//         _ => 0,
+//     };
+//     println!("{:?}", res);
+//
+//     let num = Some(4);
+//     match num {
+//         Some(x) if x % 2 == 0 => println!("The number {x} is even"),
+//         Some(x) => println!("The number {x} is odd"),
+//         None => (),
+//     }
+//
+//     let x = 4;
+//     let y = true;
+//     match x {
+//         4 | 5 | 6 if y => println!("yes"),
+//         _ => println!("no"),
+//     }
+//     println!("==============================");
+//
+//     enum Message {
+//         Hello { id: i32 },
+//     }
+//     let msg = Message::Hello { id: 0 };
+//     match msg {
+//         Message::Hello {
+//             id: id_variable @ 3..=7,
+//         } => println!("Found an id in range: {id_variable}"),
+//         Message::Hello { id: 10..=12 } => println!("Found an id in another range"),
+//         Message::Hello { id: id_another } => println!("Found some other id: {id_another}"),
+//     }
+// }
+
+static HELLO_WORLD: &str = "Hello, world!";
+
 fn main() {
-    let mut post = EPost::new();
-    post.add_text("Hello, world!!");
-    post.request_review();
-    post.reject();
-    post.request_review();
-    post.add_text("#42#");
-    post.approve();
-    post.approve();
-    println!("Post content: {}", post.content());
+    let mut num = 5;
+    let address = 0x012345usize;
+    let r = address as *mut i32;
+
+    let r1 = &num as *const i32;
+    let r2 = &mut num as *mut i32;
+
+    unsafe {
+        println!("num address: {:p}", &num);
+        println!("r1 is: {}", *r1);
+        // println!("r2 is: {}", *r2);
+    }
+
+    unsafe fn dangerous(r: *mut i32) {
+        println!("r2 is: {}", *r);
+    }
+
+    unsafe {
+        dangerous(r2);
+    }
+
+    let mut vector = vec![1, 2, 3, 4, 5, 6];
+    let (left, right) = split_at_mut(&mut vector, 3);
+    println!("{:?}", left);
+    println!("{:?}", right);
+
+    extern "C" {
+        fn abs(input: i32) -> i32;
+    }
+
+    unsafe {
+        println!("Absolute value of -3 according to C: {}", abs(-3));
+    }
+
+    println!("{}", HELLO_WORLD);
+
+    add_to_count(42);
+    unsafe { println!("{}", COUNTER); }
+
+    println!("===============================");
+
+    let person = Human;
+    Pilot::fly(&person);
+    Wizard::fly(&person);
+    person.fly();
+
+    println!("===============================");
+
+    println!("A baby dog is called a {}", <Dog as Animal>::baby_name());
+
+    println!("===============================");
+
+    let p = Point { x: 1, y: 3 };
+    p.outline_print();
+
+    println!("===============================");
+
+    let w = Wrapper(vec![String::from("hello"), String::from("world")]);
+    println!("w = {w}");
+
+    println!("===============================");
+
+    println!("do_twice: {}", do_twice(add_one, 42));
+}
+
+fn add_one(x: i32) -> i32 {
+    x + 1
+}
+
+fn do_twice(f: fn(i32) -> i32, arg: i32) -> i32 {
+    f(arg) + f(arg)
+}
+
+static mut COUNTER: u32 = 0;
+
+fn add_to_count(inc: u32) {
+    unsafe {
+        COUNTER += inc;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn call_from_c() {
+    println!("Just called a Rust function from C!");
+}
+
+fn split_at_mut(values: &mut [i32], mid: usize) -> (&mut [i32], &mut [i32]) {
+    let len = values.len();
+
+    assert!(mid <= len);
+
+    // (&mut values[..mid], &mut values[mid..])
+    let mut ptr = values.as_mut_ptr();
+    unsafe {
+        (
+            slice::from_raw_parts_mut(ptr, mid),
+            slice::from_raw_parts_mut(ptr.add(mid), len - mid),
+        )
+    }
 }

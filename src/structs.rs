@@ -1,9 +1,75 @@
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter, Pointer, Write};
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::{Rc, Weak};
+
+#[derive(Debug)]
+pub struct Foo {
+    pub foo: i32,
+    pub bar: i32,
+}
+
+impl Foo {
+    pub fn add_foo(&mut self) {
+        self.foo += 1;
+    }
+
+    pub fn bad_method(self) {
+        println!("something wrong!");
+    }
+}
+
+impl Default for Foo {
+    fn default() -> Self {
+        Foo {
+            foo: 0,
+            bar: 0,
+        }
+    }
+}
+
+impl Hash for Foo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.foo.hash(state);
+        self.bar.hash(state);
+    }
+}
+
+impl Copy for Foo {}
+
+impl Clone for Foo {
+    fn clone(&self) -> Self {
+        Foo {
+            foo: self.foo.clone(),
+            bar: self.bar.clone(),
+        }
+    }
+}
+
+impl PartialOrd for Foo {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Foo {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.foo.cmp(&other.foo)
+    }
+}
+
+impl PartialEq for Foo {
+    fn eq(&self, other: &Self) -> bool {
+        self.foo == other.foo &&
+            self.bar == other.bar
+    }
+}
+
+impl Eq for Foo {}
 
 pub struct Wrapper(pub Vec<String>);
 
@@ -341,13 +407,13 @@ impl<T: Debug + Display> Drop for MyBox<T> {
 }
 
 impl<T: Display + Debug> Display for MyBox<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.refer))
     }
 }
 
 impl<T: Debug + Display> Debug for MyBox<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("MyBox {}", self.refer))
     }
 }

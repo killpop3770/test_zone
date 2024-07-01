@@ -1,6 +1,6 @@
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Deref;
 use std::os::fd::AsRawFd;
-use std::slice;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
@@ -9,9 +9,7 @@ use error_chain::error_chain;
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
-use crate::structs::{Human, Pilot, Wizard, Animal, Dog, Point, OutlinePrint, Wrapper};
-
-// use crate::List::{Cons, Nil};
+use crate::structs::{Animal, Foo, OutlinePrint, Pilot, Wizard};
 
 mod converters;
 mod readers;
@@ -597,4 +595,64 @@ fn main() {
     let my_vec = my_vec!(1,2,3);
     println!("{:?}", my_vec);
     println!("========================");
+
+    // let a = Some(1);
+    // a.take();
+    let a = [1, 2, 3];
+    let b = &a[1..2];
+
+    // let mut c: i32 = 0;
+    // fn foo() -> ! {
+    //     ()
+    // }
+    // c = foo();
+
+    // fn bar() -> Result<(), ()> {
+    //     Ok(())
+    // }
+    // let d = bar().unwrap();
+
+    let a = Foo { foo: 42, bar: 1 };
+    let b = Foo { foo: 41, bar: 0 };
+    println!("a > b : {}", a > b);
+
+    let mut c = Vec::new();
+    c.push(&a);
+    c.push(&b);
+    println!("vec before sort: {:?}", c);
+
+    c.sort();
+    println!("vec after sort: {:?}", c);
+
+    let r = c.pop();
+    match r {
+        None => { println!("nothing to see") }
+        Some(s) => { println!("last el in array: {:?}", *s) }
+    }
+
+    let mut d = a.clone();
+    println!("after clone: {:?}", d);
+    Foo::add_foo(&mut d); //equals d.add_foo();
+    println!("after mutating: {:?}", d);
+
+    let e = d;
+    println!("after copy e == d : {}", e == d);
+
+    let mut hasher = DefaultHasher::new();
+    d.hash(&mut hasher);
+    println!("hash: {}", hasher.finish());
+
+    let mut new_hasher = DefaultHasher::new();
+    e.hash(&mut new_hasher);
+    println!("hash: {}", new_hasher.finish());
+
+    let f = Foo {
+        foo: 42,
+        ..Default::default()
+    };
+    println!("f with default: {:?}", f);
+
+    // let g = Box::new(f);
+    // let j = g;
+    // println!("{:?} {:?}", g, j);
 }

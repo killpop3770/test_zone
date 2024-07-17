@@ -1,9 +1,17 @@
+use std::cell::{Cell, RefCell};
+use std::error::Error;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Deref;
 use std::os::fd::AsRawFd;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant};
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
+use tokio::task::JoinHandle;
+use rand::{random, Rng, thread_rng};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpListener;
 
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
@@ -591,68 +599,211 @@ mod decl_macros;
 // }
 
 
-fn main() {
-    let my_vec = my_vec!(1,2,3);
-    println!("{:?}", my_vec);
-    println!("========================");
+// fn main() {
+//     let my_vec = my_vec!(1,2,3);
+//     println!("{:?}", my_vec);
+//     println!("========================");
+//
+//     // let a = Some(1);
+//     // a.take();
+//     let a = [1, 2, 3];
+//     let b = &a[1..2];
+//
+//     // let mut c: i32 = 0;
+//     // fn foo() -> ! {
+//     //     ()
+//     // }
+//     // c = foo();
+//
+//     // fn bar() -> Result<(), ()> {
+//     //     Ok(())
+//     // }
+//     // let d = bar().unwrap();
+//
+//     let a = Foo { foo: 42, bar: 1 };
+//     let b = Foo { foo: 41, bar: 0 };
+//     println!("a > b : {}", a > b);
+//
+//     let mut c = Vec::new();
+//     c.push(&a);
+//     c.push(&b);
+//     println!("vec before sort: {:?}", c);
+//
+//     c.sort();
+//     println!("vec after sort: {:?}", c);
+//
+//     let r = c.pop();
+//     match r {
+//         None => { println!("nothing to see") }
+//         Some(s) => { println!("last el in array: {:?}", *s) }
+//     }
+//
+//     let mut d = a.clone();
+//     println!("after clone: {:?}", d);
+//     Foo::add_foo(&mut d); //equals d.add_foo();
+//     println!("after mutating: {:?}", d);
+//
+//     let e = d;
+//     println!("after copy e == d : {}", e == d);
+//
+//     let mut hasher = DefaultHasher::new();
+//     d.hash(&mut hasher);
+//     println!("hash: {}", hasher.finish());
+//
+//     let mut new_hasher = DefaultHasher::new();
+//     e.hash(&mut new_hasher);
+//     println!("hash: {}", new_hasher.finish());
+//
+//     let f = Foo {
+//         foo: 42,
+//         ..Default::default()
+//     };
+//     println!("f with default: {:?}", f);
+//
+//     // let g = Box::new(f);
+//     // let j = g;
+//     // println!("{:?} {:?}", g, j);
+// }
 
-    // let a = Some(1);
-    // a.take();
-    let a = [1, 2, 3];
-    let b = &a[1..2];
 
-    // let mut c: i32 = 0;
-    // fn foo() -> ! {
-    //     ()
-    // }
-    // c = foo();
+// fn main() {
+//     let source = RwLock::new(0);
+//     // RefCell::new(0); // can not shared between threads !Sync
+//     // MutexCell::new(0); // ok
+//     // Cell::new(0); // can not shared between threads !Sync
+//     let source_to_arc = Arc::new(source);
+//
+//     let timer = Instant::now();
+//     let mut handlers = vec![];
+//     for _ in 0..10 {
+//         let str_to_arc_ref = Arc::clone(&source_to_arc);
+//         let handler = foo_read(str_to_arc_ref);
+//         handlers.push(handler);
+//     }
+//
+//     let str_to_arc_ref = Arc::clone(&source_to_arc);
+//     let handler = foo_write(str_to_arc_ref);
+//     handlers.push(handler);
+//
+//     for handler in handlers {
+//         handler.join().unwrap();
+//     }
+//
+//     let duration = timer.elapsed();
+//     println!("Result: {}, time passed: {:?}", source_to_arc.read().unwrap(), duration);
+// }
+//
+// fn foo_read(source: Arc<RwLock<i32>>) -> std::thread::JoinHandle<()> {
+//     let handler =
+//         std::thread::spawn(move || {
+//             std::thread::sleep(Duration::from_secs(2));
+//             if let Ok(result) = source.try_read() {
+//                 println!("Strong count: {} in {:?} inside foo.", Arc::strong_count(&source), result);
+//             }
+//         });
+//
+//     handler
+// }
+//
+// fn foo_write(source: Arc<RwLock<i32>>) -> std::thread::JoinHandle<()> {
+//     let handler =
+//         std::thread::spawn(move || {
+//             std::thread::sleep(Duration::from_secs(2));
+//             if let Ok(mut lock_result) = source.write() {
+//                 *lock_result = thread_rng().gen_range(0..100);
+//             }
+//             println!("Strong count: {} in {:?} inside foo.", Arc::strong_count(&source), source.try_read().unwrap());
+//         });
+//
+//     handler
+// }
+//
+// fn foo(source: Arc<MutexCell>) {
+//     std::thread::sleep(Duration::from_secs(2));
+//     source.set(thread_rng().gen_range(0..100));
+//     println!("Strong count: {} in {:?} inside foo.", Arc::strong_count(&source), source.get());
+// }
+//
+// #[derive(Debug)]
+// struct MutexCell {
+//     field: Mutex<Cell<i32>>,
+// }
+//
+// impl MutexCell {
+//     fn new(i: i32) -> MutexCell {
+//         MutexCell {
+//             field: Mutex::new(Cell::new(i)),
+//         }
+//     }
+//
+//     fn get(&self) -> i32 {
+//         self.field.lock().unwrap().get()
+//     }
+//
+//     fn set(&self, i: i32) {
+//         self.field.lock().unwrap().set(i);
+//     }
+// }
+//
+//
+// fn some_work() {
+//     std::thread::sleep(Duration::from_secs(2));
+//     println!("Just sleep in... {:?}", std::thread::current());
+// }
+//
+// fn main() {
+//     let source = Arc::new(MutexCell::new(0));
+//
+//     let thread_pool = rayon::ThreadPoolBuilder::new()
+//         .num_threads(3)
+//         .build()
+//         .unwrap();
+//
+//     let timer = Instant::now();
+//     thread_pool.scope(|x| {
+//         for _ in 0..9 {
+//             let source_ref = Arc::clone(&source);
+//             x.spawn(|_| {
+//                 // some_work();
+//                 foo(source_ref);
+//             });
+//         }
+//     });
+//     let duration = timer.elapsed();
+//     println!("Result value: {}, time passed: {:?}", source.get(), duration);
+// }
 
-    // fn bar() -> Result<(), ()> {
-    //     Ok(())
-    // }
-    // let d = bar().unwrap();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let listener = TcpListener::bind("127.0.0.1:8080").await.expect("Can not create listener!");
 
-    let a = Foo { foo: 42, bar: 1 };
-    let b = Foo { foo: 41, bar: 0 };
-    println!("a > b : {}", a > b);
+    loop {
+        if let Ok((mut socket, address)) = listener.accept().await {
+            println!("new client address: {}", address);
+            tokio::spawn(async move {
+                let mut buffer = [0; 1024];
 
-    let mut c = Vec::new();
-    c.push(&a);
-    c.push(&b);
-    println!("vec before sort: {:?}", c);
+                loop {
+                    let n = match socket.read(&mut buffer).await {
+                        Ok(n) => n,
+                        Err(e) => {
+                            println!("Error occurred by reading socket: {} !", e);
+                            return;
+                        }
+                    };
 
-    c.sort();
-    println!("vec after sort: {:?}", c);
+                    if n > 0 {
+                        let data = String::from_utf8_lossy(&buffer[0..n]);
+                        println!("Read something: {:?}", data);//&buffer[0..n]);
+                    }
 
-    let r = c.pop();
-    match r {
-        None => { println!("nothing to see") }
-        Some(s) => { println!("last el in array: {:?}", *s) }
+                    if let Err(e) = socket.write_all(&buffer[0..n]).await {
+                        println!("Error occurred by writing socket: {} !", e);
+                        return;
+                    }
+                }
+            });
+        }
     }
-
-    let mut d = a.clone();
-    println!("after clone: {:?}", d);
-    Foo::add_foo(&mut d); //equals d.add_foo();
-    println!("after mutating: {:?}", d);
-
-    let e = d;
-    println!("after copy e == d : {}", e == d);
-
-    let mut hasher = DefaultHasher::new();
-    d.hash(&mut hasher);
-    println!("hash: {}", hasher.finish());
-
-    let mut new_hasher = DefaultHasher::new();
-    e.hash(&mut new_hasher);
-    println!("hash: {}", new_hasher.finish());
-
-    let f = Foo {
-        foo: 42,
-        ..Default::default()
-    };
-    println!("f with default: {:?}", f);
-
-    // let g = Box::new(f);
-    // let j = g;
-    // println!("{:?} {:?}", g, j);
 }
+

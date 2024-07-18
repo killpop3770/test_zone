@@ -1,23 +1,24 @@
-use std::cell::{Cell, RefCell};
 use std::error::Error;
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::os::fd::AsRawFd;
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Instant;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
-use tokio::task::JoinHandle;
-use rand::{random, Rng, thread_rng};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpListener;
+use rand::{Rng, thread_rng};
+use rand::distributions::Alphanumeric;
+use rayon::iter::ParallelIterator;
+use rayon::prelude::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelSliceMut};
+use rayon::{scope, ThreadPool, ThreadPoolBuilder};
 
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
 #[allow(unused_imports)]
 use crate::readers::read_from_json;
-use crate::structs::{Animal, Foo, OutlinePrint, Pilot, Wizard};
+use crate::structs::{Animal, OutlinePrint, Pilot, Wizard};
 
 mod converters;
 mod readers;
@@ -773,37 +774,143 @@ mod decl_macros;
 //     println!("Result value: {}, time passed: {:?}", source.get(), duration);
 // }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let listener = TcpListener::bind("127.0.0.1:8080").await.expect("Can not create listener!");
+// #[tokio::main]
+// async fn main() {
+//     let listener = TcpListener::bind("127.0.0.1:8080").await.expect("Can not create listener!");
+//
+//     loop {
+//         if let Ok((mut socket, address)) = listener.accept().await {
+//             println!("new client address: {}", address);
+//             tokio::spawn(async move {
+//                 let mut buffer = [0; 1024];
+//
+//                 loop {
+//                     let n = match socket.read(&mut buffer).await {
+//                         Ok(n) => n,
+//                         Err(e) => {
+//                             println!("Error occurred by reading socket: {} !", e);
+//                             return;
+//                         }
+//                     };
+//
+//                     if n > 0 {
+//                         let data = String::from_utf8_lossy(&buffer[0..n]);
+//                         println!("Read something: {:?}", data);//&buffer[0..n]);
+//                     }
+//
+//                     if let Err(e) = socket.write_all(&buffer[0..n]).await {
+//                         println!("Error occurred by writing socket: {} !", e);
+//                         return;
+//                     }
+//                 }
+//             });
+//         }
+//     }
+// }
+//
 
-    loop {
-        if let Ok((mut socket, address)) = listener.accept().await {
-            println!("new client address: {}", address);
-            tokio::spawn(async move {
-                let mut buffer = [0; 1024];
+// fn main() {
+//     let (tx, rx) = channel();
+//
+//     let tx_cloned = tx.clone();
+//
+//     std::thread::spawn(move || {
+//         let arr = ["Hello ", "from ", "thread_id: ", &*thread_id::get().to_string()]
+//             .iter()
+//             .map(|x| x.to_string())
+//             .collect::<Vec<String>>();
+//
+//         for elem in arr {
+//             tx.send(elem).unwrap();
+//             println!("Send message!");
+//             std::thread::sleep(Duration::from_secs(3));
+//         }
+//     });
+//
+//     std::thread::spawn(move || {
+//         let arr = ["Hello ", "from ", "thread_id: ", &*thread_id::get().to_string()]
+//             .iter()
+//             .map(|x| x.to_string())
+//             .collect::<Vec<String>>();
+//
+//         for elem in arr {
+//             tx_cloned.send(elem).unwrap();
+//             println!("Send message!");
+//             std::thread::sleep(Duration::from_secs(2));
+//         }
+//     });
+//
+//     for received_data in rx {
+//         println!("Received data: {}", received_data);
+//     }
+// }
 
-                loop {
-                    let n = match socket.read(&mut buffer).await {
-                        Ok(n) => n,
-                        Err(e) => {
-                            println!("Error occurred by reading socket: {} !", e);
-                            return;
-                        }
-                    };
+// fn main() {
+//     let source = AtomicU8::new(0);
+//
+//     let thread_pool = rayon::ThreadPoolBuilder::new()
+//         .num_threads(3)
+//         .build()
+//         .unwrap();
+//
+//     thread_pool.scope(|x| {
+//         for _ in 0..10 {
+//             let source_ref = &source;
+//             x.spawn(|_| {
+//                 let value = thread_rng().gen_range(0..=100);
+//                 source_ref.store(value, SeqCst);
+//                 println!("From thread: {}, value is: {}", thread_id::get(), source_ref.load(SeqCst));
+//             });
+//         }
+//     });
+//
+//     println!("Result: {}", source.load(SeqCst));
+// }
 
-                    if n > 0 {
-                        let data = String::from_utf8_lossy(&buffer[0..n]);
-                        println!("Read something: {:?}", data);//&buffer[0..n]);
-                    }
+fn main() {
+    // let a = AtomicU8::new(0);
+    // a.fetch_sub(1, SeqCst);
+    // println!("{}", a.load(SeqCst));
+    //
+    // let nums = vec![1, 2, 3, 4, 5];
+    // let squares: Vec<_> = nums.par_iter().map(|&i| i * i).collect();
+    // println!("{:?}", squares);
+    //
+    // let data: Vec<i32> = (1..=10000).collect();
+    // let result: Vec<i32> = data
+    //     .par_iter()
+    //     .filter(|&&x| x % 2 == 0)
+    //     .map(|&x| x * x)
+    //     .collect();
+    // println!("res: {:?}", result);
 
-                    if let Err(e) = socket.write_all(&buffer[0..n]).await {
-                        println!("Error occurred by writing socket: {} !", e);
-                        return;
-                    }
-                }
-            });
-        }
-    }
+    // let mut vec = vec![0; 100_000_000];
+    // vec.par_iter_mut().for_each(|p| {
+    //     let mut rng = thread_rng();
+    //     *p = rng.gen_range(0..1000)
+    // });
+    // let timer = Instant::now();
+    // vec.par_sort(); // Result: 10.818203838s
+    // // vec.sort(); // Result: 42.330823364s
+    // println!("Result: {:?}", timer.elapsed());
+
+    let threads = 5;
+    let pool = ThreadPoolBuilder::new().num_threads(threads).build().expect("");
+    pool.scope(move |x| {
+        let mut vec = vec![0; 100_000_000];
+        vec.par_iter_mut().for_each(|p| {
+            let mut rng = thread_rng();
+            *p = rng.gen_range(0..1000)
+        });
+
+        x.spawn(move |x1| {
+            let timer = Instant::now();
+            // "num_threads(_)" of ThreadPoolBuilder is use in parallel operations!
+            // without threadpool and it's scope, rayons's parallel operations not limited by the number of threads!
+            vec.par_sort();// Result: 10.934706812s
+            // vec.sort();// Result: 43.982947859s
+            println!("Result: {:?}", timer.elapsed());
+        });
+    });
+    drop(pool);
 }
-

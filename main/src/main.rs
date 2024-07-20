@@ -1,18 +1,15 @@
 use std::error::Error;
+use std::fs::File;
 use std::hash::{Hash, Hasher};
+use std::io::Write;
 use std::ops::Deref;
 use std::os::fd::AsRawFd;
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Instant;
 
 #[allow(unused_imports)]
 use error_chain::error_chain;
-use rand::{Rng, thread_rng};
-use rand::distributions::Alphanumeric;
+use rand::Rng;
 use rayon::iter::ParallelIterator;
-use rayon::prelude::{IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelSliceMut};
-use rayon::{scope, ThreadPool, ThreadPoolBuilder};
+use serde::{Deserialize, Serialize};
 
 #[allow(unused_imports)]
 use crate::readers::{get_request, read_from_file_by_csv, write_to_json};
@@ -867,50 +864,71 @@ mod decl_macros;
 //     println!("Result: {}", source.load(SeqCst));
 // }
 
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct Rubles(u32);
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct Kopecks(u8);
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct Pay {
+    rubles: Rubles,
+    kopecks: Kopecks,
+}
+
+impl Pay {
+    fn new(r: u32, k: u8) -> Pay {
+        if k < 100 {
+            Pay {
+                rubles: Rubles(r),
+                kopecks: Kopecks(k),
+            }
+        } else {
+            let k_new: u8 = k % 100;
+            let adding_r: u32 = (k / 100) as u32;
+            Pay {
+                rubles: Rubles(r + adding_r),
+                kopecks: Kopecks(k_new),
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum List<'a, T> {
+    Cons(T, &'a List<'a, T>),
+    Nil,
+}
+
+struct DefaultUser {
+    name: String,
+}
+
+trait SomethingCool {
+    type Output;
+    fn cooling(&self) -> Self::Output;
+}
+// impl SomethingCool for DefaultUser {
+//     type Output = String;
+//
+//     fn cooling(&self) -> Self::Output {
+//         let a = &self.name;
+//         return *a;
+//     }
+// }
+
 fn main() {
-    // let a = AtomicU8::new(0);
-    // a.fetch_sub(1, SeqCst);
-    // println!("{}", a.load(SeqCst));
-    //
-    // let nums = vec![1, 2, 3, 4, 5];
-    // let squares: Vec<_> = nums.par_iter().map(|&i| i * i).collect();
-    // println!("{:?}", squares);
-    //
-    // let data: Vec<i32> = (1..=10000).collect();
-    // let result: Vec<i32> = data
-    //     .par_iter()
-    //     .filter(|&&x| x % 2 == 0)
-    //     .map(|&x| x * x)
-    //     .collect();
-    // println!("res: {:?}", result);
+    let path = "serde.txt";
+    let mut file = File::create(path).expect("file open error!");
+    let data = serde_json::to_string(&Pay::new(100, 255)).expect("error to serialize!");
+    file.write_all(data.as_bytes()).expect("error to write in file!");
 
-    // let mut vec = vec![0; 100_000_000];
-    // vec.par_iter_mut().for_each(|p| {
-    //     let mut rng = thread_rng();
-    //     *p = rng.gen_range(0..1000)
-    // });
-    // let timer = Instant::now();
-    // vec.par_sort(); // Result: 10.818203838s
-    // // vec.sort(); // Result: 42.330823364s
-    // println!("Result: {:?}", timer.elapsed());
+    let list = List::Cons(1, &List::Cons(2, &List::Nil));
+    println!("{:?}", list);
 
-    let threads = 5;
-    let pool = ThreadPoolBuilder::new().num_threads(threads).build().expect("");
-    pool.scope(move |x| {
-        let mut vec = vec![0; 100_000_000];
-        vec.par_iter_mut().for_each(|p| {
-            let mut rng = thread_rng();
-            *p = rng.gen_range(0..1000)
-        });
 
-        x.spawn(move |x1| {
-            let timer = Instant::now();
-            // "num_threads(_)" of ThreadPoolBuilder is use in parallel operations!
-            // without threadpool and it's scope, rayons's parallel operations not limited by the number of threads!
-            vec.par_sort();// Result: 10.934706812s
-            // vec.sort();// Result: 43.982947859s
-            println!("Result: {:?}", timer.elapsed());
-        });
-    });
-    drop(pool);
+    let mut test = vec![1, 2, 3];
+    for i in test.iter(){}
+    for i in test.iter_mut(){}
+    for i in test.into_iter() {}// consume vec! ownership on all values
 }

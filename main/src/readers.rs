@@ -31,7 +31,7 @@ pub fn get_parent_recursively(cat: &Rc<RefCell<Cat>>) {
 
 pub fn read_md_files() -> Result<Vec<PathBuf>, io::Error> {
     let mut md_files_dir = env::current_dir()?;
-    md_files_dir.push("md");
+    md_files_dir.push("../md");
     let entires = fs::read_dir(md_files_dir)?;
 
     let mut path_vec = vec![];

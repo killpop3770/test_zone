@@ -43,7 +43,7 @@ pub fn convert_md_to_html_parallel(
                     .unwrap();
 
                 let mut html_file_path = env::current_dir().expect("Can not read directory!");
-                html_file_path.push("html");
+                html_file_path.push("../html");
                 html_file_path.push(current_file_name);
                 html_file_path.set_extension("html");
 

@@ -1,0 +1,9 @@
+[package]
+name = "shortening_url_service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sha2 = "*"
+hex = "*"
+uuid = {version = "*", features = ["v4"]}

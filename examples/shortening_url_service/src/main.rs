@@ -43,8 +43,8 @@
 
 #![allow(unused_variables, dead_code)]
 use std::collections::HashMap;
+use crate::queries::QueryHandler;
 use commands::CommandHandler;
-use queries::QueryHandler;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -117,6 +117,13 @@ pub mod commands {
         fn handle_redirect(
             &mut self,
             slug: Slug,
+        ) -> Result<ShortLink, ShortenerError>;
+
+        /// Changes [Url] of a [ShortLink] with a provided [Slug].
+        fn handle_change_short_link(
+            &mut self,
+            slug: Slug,
+            new_url: Url
         ) -> Result<ShortLink, ShortenerError>;
     }
 }
@@ -244,6 +251,19 @@ impl commands::CommandHandler for UrlShortenerService {
         stats.redirects += 1;
         Ok(short_link.clone())
     }
+    
+    fn handle_change_short_link(
+        &mut self,
+        slug: Slug,
+        new_url: Url
+    ) -> Result<ShortLink, ShortenerError> {
+        if new_url.0.is_empty() || new_url.0.trim().is_empty() {
+            return Err(ShortenerError::InvalidUrl);
+        }
+        let short_link = self.short_links.get_mut(&slug.0).ok_or(ShortenerError::SlugNotFound)?;
+        short_link.url = new_url;
+        Ok(short_link.clone())
+    }
 }
 
 impl queries::QueryHandler for UrlShortenerService {
@@ -255,12 +275,23 @@ impl queries::QueryHandler for UrlShortenerService {
     }
 }
 
+// Introduce functionality to allow updating the URL of an existing short link. 
+// This new functionality should be reflected in the CommandHandler trait.  
+// Update the CommandHandler trait to include the following method:  
+
+
 fn main() -> () {
 
     let mut service = UrlShortenerService::new();
 
     let short_link1 = service.handle_create_short_link(Url("https://example.com/123".to_string()), None).unwrap(); 
     println!("Ok when create link1: {:?}", short_link1);
+
+    let short_link2 = service.handle_create_short_link(Url("https://example.com/456".to_string()), None).unwrap(); 
+    match service.handle_change_short_link(short_link2.slug, Url("https://example.com/654".to_string())){
+            Ok(short_link) => println!("Ok when create link2: {:?}", short_link),
+            Err(err) => println!("Error when create link2: {:?}", err),
+    }
 
     match service.handle_create_short_link(Url("https://example.com/123".to_string()), None){
         Ok(short_link) => println!("Ok when create link2: {:?}", short_link),
